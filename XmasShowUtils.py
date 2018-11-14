@@ -1,5 +1,5 @@
 ##############################################
-def read_config(cfgfile='XmasShowPi.cfg'):
+def read_config(cfgfile='XmasShowPi.cfg', debug=False):
 
     config_data = {}
     outlets = []
@@ -15,10 +15,14 @@ def read_config(cfgfile='XmasShowPi.cfg'):
 
         if cline[0] == 'OUTLET':
             print("Found Outlet:", cline[1])
-            outlets[num_outlets]['cfgline'] = cline[1]
             outlet_line = cline[1].split(",")
-            outlets[num_outlets]['name'] = outlet_line[0]
-            outlets[num_outlets]['GPIO'] = outlet_line[1]
+            outlet_cfg = {}
+
+            outlet_cfg['cfgline'] = cline[1]
+            outlet_cfg['name'] = outlet_line[0]
+            outlet_cfg['GPIO'] = outlet_line[1]
+
+            outlets.append(outlet_cfg)
             num_tokens += 1
             num_outlets += 1
 
@@ -36,7 +40,8 @@ def read_config(cfgfile='XmasShowPi.cfg'):
         print("Missing XmasShowPi configuration information")
         exit(-2)
 
-    config_data['Outlets'] = outlets
+    config_data['outlets'] = outlets
+    config_data['num_outlets'] = num_outlets
     return config_data
 
 ####### end read_config

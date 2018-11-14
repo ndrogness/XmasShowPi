@@ -11,4 +11,8 @@ import wave
 import numpy as np
 import XmasShowUtils as xs
 
-MyConfig = xs.read_config()
+cfg = xs.read_config()
+#print(cfg)
+
+for i in range(0,cfg['num_outlets']):
+    print(cfg['outlets'][i]['name'])
