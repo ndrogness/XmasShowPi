@@ -9,10 +9,14 @@ import os
 import alsaaudio as aa
 import wave
 import numpy as np
-import XmasShowPiUtils as xs
+import XmasShowPiUtils
 
-cfg = xs.read_config()
+# Global Outlets list of outlet objects
+outlets = []
+
+cfg = read_config()
 #print(cfg)
 
 for i in range(0,cfg['num_outlets']):
-    print(cfg['outlets'][i]['name'],"->",cfg['outlets'][i]['GPIO'])
+    print(cfg['outlets'][i]['name'], "->", cfg['outlets'][i]['GPIO'])
+    outlets[i] = Outlet(cfg['outlets'][i]['name'], cfg['outlets'][i]['GPIO'])
