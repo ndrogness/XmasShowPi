@@ -15,4 +15,4 @@ cfg = xs.read_config()
 #print(cfg)
 
 for i in range(0,cfg['num_outlets']):
-    print(cfg['outlets'][i]['name'])
+    print(cfg['outlets'][i]['name'],"->",cfg['outlets'][i]['GPIO'])
