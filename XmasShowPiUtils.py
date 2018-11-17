@@ -1,4 +1,16 @@
 ##############################################
+def dprint(mesg, debug=False):
+
+    if not debug:
+        return
+
+    print(mesg)
+
+####### end read_config
+##############################################
+
+
+##############################################
 def read_config(cfgfile='XmasShowPi.cfg', debug=False):
 
     config_data = {}
@@ -14,7 +26,7 @@ def read_config(cfgfile='XmasShowPi.cfg', debug=False):
         cline = configlines[i].split("=")
 
         if cline[0] == 'OUTLET':
-            print("Found Outlet:", cline[1])
+            #print("Found Outlet:", cline[1])
             outlet_line = cline[1].split(",")
             outlet_cfg = {}
 
@@ -27,12 +39,12 @@ def read_config(cfgfile='XmasShowPi.cfg', debug=False):
             num_outlets += 1
 
         if cline[0] == 'RF_GPIO':
-            print("Found RF Transmitter:", cline[1])
+            #print("Found RF Transmitter:", cline[1])
             config_data['RF_GPIO'] = cline[1]
             num_tokens += 1
 
         if cline[0] == 'RF_FREQ':
-            print("Found RF Frequency:", cline[1])
+            #print("Found RF Frequency:", cline[1])
             config_data['RF_FREQ'] = cline[1]
             num_tokens += 1
 

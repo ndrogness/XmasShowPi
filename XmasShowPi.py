@@ -9,7 +9,7 @@ import os
 import alsaaudio as aa
 import wave
 import numpy as np
-import XmasShowUtils as xs
+import XmasShowPiUtils as xs
 
 cfg = xs.read_config()
 #print(cfg)
