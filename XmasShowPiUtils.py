@@ -7,10 +7,9 @@ GPIO.setmode(GPIO.BCM)
 ##############################################
 class Outlet:
 
-
-    def __init__(self, Name, RGPIO, RelayValueOn = 0, RelayValueOff = 1):
-        self.Name = Name
-        self.RelayGPIO = int(RGPIO)
+    def __init__(self, cfgline, RelayValueOn = 0, RelayValueOff = 1):
+        self.Name, self.RelayGPIO = cfgline.split(",")
+        #self.RelayGPIO = int(RGPIO)
         self.RelayOn = RelayValueOn
         self.RelayOff = RelayValueOff
         self.IsOn = False
