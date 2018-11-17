@@ -1,27 +1,32 @@
+#!/usr/bin/env python3
+
+import RPi.GPIO as GPIO
+
+GPIO.setmode(GPIO.BCM) 
 
 ##############################################
 class Outlet:
 
 
-    def __init__(self, Name, GPIO, RelayValueOn = 0, RelayValueOff = 1):
+    def __init__(self, Name, RGPIO, RelayValueOn = 0, RelayValueOff = 1):
         self.Name = Name
-        self.GPIO = GPIO
-        self.IsOn = False
+        self.RelayGPIO = int(RGPIO)
         self.RelayOn = RelayValueOn
         self.RelayOff = RelayValueOff
+        self.IsOn = False
 
-        GPIO.setup(self.GPIO, GPIO.OUT)
-        GPIO.output(self.GPIO, self.RelayOff)
+        GPIO.setup(self.RelayGPIO, GPIO.OUT)
+        GPIO.output(self.RelayGPIO, self.RelayOff)
 
     def GetName(self):
         return self.Name
 
     def On(self):
-        GPIO.output(self.GPIO, self.RelayOn)
+        GPIO.output(self.RelayGPIO, self.RelayOn)
         self.IsOn = True
 
     def Off(self):
-        GPIO.output(self.GPIO, self.RelayOff)
+        GPIO.output(self.RelayGPIO, self.RelayOff)
         self.IsOn = False
 
 ##############################################
