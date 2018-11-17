@@ -19,5 +19,8 @@ cfg = xs.read_config()
 
 for i in range(0,cfg['num_outlets']):
     #print(cfg['outlets'][i]['name'], "->", cfg['outlets'][i]['GPIO'])
-    outlets.append(xs.Outlet(cfg['outlets'][i]['cfgline'])
-    print ("Outlet:",outlets[i].Name,outlets[i].RelayGPIO)
+    outlets.append(xs.Outlet(cfg['outlets'][i]['cfgline']))
+    print("Outlet:",outlets[i].Name,outlets[i].RelayGPIO)
+    outlets[i].On()
+    time.sleep(1)
+    outlets[i].Off()
