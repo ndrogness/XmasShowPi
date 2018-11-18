@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import RPi.GPIO as GPIO
+import os
 
-GPIO.setmode(GPIO.BCM) 
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
 
 ##############################################
 class Outlet:
@@ -42,6 +44,21 @@ def dprint(mesg, debug=False):
 
 
 ##############################################
+def build_playlist(songs_dir, debug=False):
+
+    songs = []
+    if not os.path.exists(songs_dir):
+        return (songs)
+
+    for dfile in os.listdir(songs_dir):
+        pfile = "%s/%s" % (songs_dir, dfile)
+        if os.path.isfile(pfile):
+            #print("Song is:", pfile)
+            songs.append(pfile)
+
+    return(songs)
+##############################################
+
 def read_config(cfgfile='XmasShowPi.cfg', debug=False):
 
     config_data = {}
@@ -77,6 +94,11 @@ def read_config(cfgfile='XmasShowPi.cfg', debug=False):
         if cline[0] == 'RF_FREQ':
             #print("Found RF Frequency:", cline[1])
             config_data['RF_FREQ'] = cline[1]
+            num_tokens += 1
+
+        if cline[0] == 'SONGS_DIR':
+            #print("Found Songs dir:", cline[1])
+            config_data['songs_dir'] = cline[1]
             num_tokens += 1
 
     if num_tokens < 3:
