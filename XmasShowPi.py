@@ -8,6 +8,7 @@ import os
 import numpy as np
 import XmasShowPiUtils as xs
 import RogyAudio as ra
+import RogyDisplay
 
 # Global list of objects
 outlets = []
@@ -17,10 +18,12 @@ playlist = []
 ###########################################################################
 def HardCleanExit():
     audio_file.stop()
+    display.off()
     exit(0)
 
 ###########################################################################
 
+display = RogyDisplay.LCD1602(initial_msg='Xmas Pi Show')
 
 cfg = xs.read_config()
 playlist = xs.build_playlist(cfg['songs_dir'])
@@ -42,6 +45,8 @@ try:
 
         # init Audio File object
         audio_file = ra.RogyAudioFile(playlist[i])
+
+        display.print(playlist[i],1,0)
 
         adata = audio_file.read_chunk()
 
