@@ -2,6 +2,7 @@
 
 import RPi.GPIO as GPIO
 import os
+import datetime
 from PCF8574 import PCF8574_GPIO
 from Adafruit_LCD1602 import Adafruit_CharLCD
 
@@ -63,7 +64,11 @@ def build_playlist(songs_dir, debug=False):
 
 def read_config(cfgfile='XmasShowPi.cfg', debug=False):
 
-    config_data = {}
+    # Defaults
+    config_data = {'songs_dir': 'songs',
+                   'start_time_hour': datetime.time(hour=17),
+                   'duration_hours': 5}
+
     outlets = []
     num_tokens = 0
     num_outlets = 0
@@ -101,6 +106,17 @@ def read_config(cfgfile='XmasShowPi.cfg', debug=False):
         if cline[0] == 'SONGS_DIR':
             #print("Found Songs dir:", cline[1])
             config_data['songs_dir'] = cline[1]
+            num_tokens += 1
+
+        if cline[0] == 'START_TIME_HOUR':
+            #print("Found Start time:", cline[1])
+            config_data['start_time_hour_text'] = cline[1]
+            config_data['start_time_hour'] = datetime.time(hour=int(cline[1]))
+            num_tokens += 1
+
+        if cline[0] == 'DURATION_HOURS':
+            #print("Found Start time:", cline[1])
+            config_data['duration_hours'] = int(cline[1])
             num_tokens += 1
 
     if num_tokens < 3:

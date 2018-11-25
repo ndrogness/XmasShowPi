@@ -10,7 +10,7 @@ import wave
 
 
 ##############################################
-class RogyAudioFile:
+class AudioFile:
 
     def __init__(self, afile, type='WAV', achunk=4096):
 
