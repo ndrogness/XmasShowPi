@@ -33,16 +33,33 @@ def check_run_time():
 
     now_datetime = datetime.datetime.now()
 
+    start_time = datetime.datetime.combine(now_datetime, cfg['start_time_hour'])
+    end_time = start_time + datetime.timedelta(hours=cfg['duration_hours'])
+
+    # Update state times if needed
+    if 'start_time' not in state:
+        if now_datetime > end_time:
+            start_time = start_time + datetime.timedelta(days=1)
+            end_time = end_time + datetime.timedelta(days=1)
+
+    else:
+        if now_datetime < state['end_time']:
+            start_time = state['start_time']
+            end_time = state['end_time']
+        else:
+            start_time = start_time + datetime.timedelta(days=1)
+            end_time = end_time + datetime.timedelta(days=1)
+
+    state['start_time'] = start_time
+    state['end_time'] = end_time
+
+    #print(start_time)
+    #print(end_time)
+
     if not state['IS_RUNNING']:
 
-        start_time = datetime.datetime.combine(now_datetime, cfg['start_time_hour'])
-        end_time = start_time + datetime.timedelta(hours=cfg['duration_hours'])
-        #print(start_time)
-        #print(end_time)
 
         if now_datetime >= start_time and now_datetime < end_time:
-            state['start_time'] = start_time
-            state['end_time'] = end_time
             state['last_time_check'] = now_datetime
             state['last_time_check_detail'] = 'Not Running: inside allowable time!'
             return True
@@ -62,7 +79,7 @@ def check_run_time():
             state['last_time_check_detail'] = 'Running: outside allowable time'
             return False
 
-#### ENd HardCleanExit
+#### End HardCleanExit
 ###########################################################################
 
 
@@ -93,6 +110,10 @@ def xmas_show_start():
                 audio_file.write_chunk(audio_data)
                 audio_data = audio_file.read_chunk()
 
+        else:
+            dmsg = state['start_time'].strftime("Run %m/%d @ %I%p")
+            print(dmsg)
+            display.print(dmsg, 1, 0)
 
     state['IS_RUNNING'] = False
 

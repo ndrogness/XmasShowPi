@@ -23,7 +23,7 @@ class LCD1602:
             self.lcd.clear()
         self.lcd.setCursor(col, row)
         self.lcd.message(msg)
-        self.lcd.autoscroll()
+        #self.lcd.autoscroll()
 
     def off(self):
         self.lcd.noDisplay()
