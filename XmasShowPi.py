@@ -4,29 +4,22 @@ import RPi.GPIO as GPIO
 import sys
 import time
 import datetime
+import board
+import busio
+import digitalio
+import adafruit_si4713
 import random
 import os
 import numpy as np
 import XmasShowPiUtils as xs
 import RogyAudio
 import RogyDisplay
+import RogyRadio
 
 # Global list of objects
 outlets = []
 #playlist = []
 state = {'DO_RUN': True, 'IS_RUNNING': False}
-
-
-
-
-###########################################################################
-def HardCleanExit():
-    #audio_file.stop()
-    display.off()
-    exit(0)
-
-#### ENd HardCleanExit
-###########################################################################
 
 ###########################################################################
 def check_run_time():
@@ -87,6 +80,8 @@ def check_run_time():
 ###########################################################################
 def xmas_show_start():
 
+    radio.set_gpio(gpio1_on=True, gpio2_on=True)
+
     # Loop through the playlist and play each song
     for song_index in range(0, len(playlist)):
 
@@ -99,6 +94,8 @@ def xmas_show_start():
 
             state['IS_RUNNING'] = True
 
+            # Turn on radio
+            radio.on()
             # init Audio File object
             audio_file = RogyAudio.AudioFile(playlist[song_index])
 
@@ -115,6 +112,7 @@ def xmas_show_start():
             print(dmsg)
             display.print(dmsg, 1, 0)
 
+    radio.set_gpio(gpio1_on=True, gpio2_on=False)
     state['IS_RUNNING'] = False
 
 ### End xmas_show_start
@@ -136,17 +134,32 @@ def init_outlets():
 ### End xmas_show_start
 ###########################################################################
 
-# Load in config
-cfg = xs.read_config()
-#print(cfg)
 
-# init the lcd display
-display = RogyDisplay.LCD1602(initial_msg='Xmas Pi Show')
+###########################################################################
+def HardCleanExit():
+    #audio_file.stop()
+    radio.off()
+    display.off()
+    exit(0)
 
-# Build a playlist of songs
-playlist = xs.build_playlist(cfg['songs_dir'])
+#### ENd HardCleanExit
+###########################################################################
+
 
 try:
+
+    # Load in config
+    cfg = xs.read_config()
+    #print(cfg)
+
+    # init the lcd display
+    display = RogyDisplay.LCD1602(initial_msg='Xmas Pi Show')
+
+    # Build a playlist of songs
+    playlist = xs.build_playlist(cfg['songs_dir'])
+
+    # Grab the RF transmitter
+    radio = RogyRadio.SI4713(si_reset_gpio=cfg['RF_GPIO'], fm_freq=cfg['RF_FREQ'])
 
     while state['DO_RUN']:
         xmas_show_start()

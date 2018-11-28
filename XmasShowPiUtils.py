@@ -95,12 +95,12 @@ def read_config(cfgfile='XmasShowPi.cfg', debug=False):
 
         if cline[0] == 'RF_GPIO':
             #print("Found RF Transmitter:", cline[1])
-            config_data['RF_GPIO'] = cline[1]
+            config_data['RF_GPIO'] = int(cline[1])
             num_tokens += 1
 
         if cline[0] == 'RF_FREQ':
             #print("Found RF Frequency:", cline[1])
-            config_data['RF_FREQ'] = cline[1]
+            config_data['RF_FREQ'] = float(cline[1])
             num_tokens += 1
 
         if cline[0] == 'SONGS_DIR':
