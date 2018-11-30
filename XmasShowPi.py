@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
 
-import RPi.GPIO as GPIO
 import sys
 import time
 import datetime
-import board
-import busio
-import digitalio
-import adafruit_si4713
-import random
-import os
-import numpy as np
+import RPi.GPIO as GPIO
 import XmasShowPiUtils as xs
 import RogyAudio
 import RogyDisplay
@@ -72,15 +65,16 @@ def check_run_time():
             state['last_time_check_detail'] = 'Running: outside allowable time'
             return False
 
-#### End HardCleanExit
+#### End check_run_time
 ###########################################################################
-
 
 
 ###########################################################################
 def xmas_show_start():
 
     radio.set_gpio(gpio1_on=True, gpio2_on=True)
+
+    levels = [0, 0, 0, 0, 0, 0, 0, 0]
 
     # Loop through the playlist and play each song
     for song_index in range(0, len(playlist)):
@@ -101,11 +95,21 @@ def xmas_show_start():
 
             display.print(playlist[song_index], 1, 0)
 
-            audio_data = audio_file.read_chunk()
+            #audio_data = audio_file.read_chunk()
+            audio_data = audio_file.read_analyze_chunk()
+            chunk_counter = 1
 
-            while len(audio_data) > 0:
+            while sys.getsizeof(audio_data) > 16000:
+                # RogyAudio.print_levels(levels)
+                # if chunk_counter % 3 == 0:
+                #    RogyAudio.print_levels(audio_file.chunk_levels)
+
                 audio_file.write_chunk(audio_data)
-                audio_data = audio_file.read_chunk()
+
+                #audio_data = audio_file.read_chunk()
+                audio_data = audio_file.read_analyze_chunk()
+
+                chunk_counter += 1
 
         else:
             dmsg = state['start_time'].strftime("Run %m/%d @ %I%p")
