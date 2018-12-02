@@ -2,9 +2,6 @@
 
 import sys
 import os
-import time
-import pyaudio
-import random
 import alsaaudio as aa
 import wave
 from struct import unpack
@@ -27,7 +24,8 @@ SubBass = {'name': 'SubBass',
            'freq_sweetspot': 60,
            'step_size': 5,
            'weight': 1,
-           'num_freqs_to_include': 0
+           'num_freqs_to_include': 0,
+           'freqs': [60]
            }
 
 
@@ -37,7 +35,8 @@ Bass = {'name': 'Bass',
         'freq_sweetspot': 140,
         'step_size': 25,
         'weight': 2,
-        'num_freqs_to_include': 1
+        'num_freqs_to_include': 1,
+        'freqs': [80]
         }
 
 LowMidrange = {'name': 'LowMidrange',
@@ -46,7 +45,8 @@ LowMidrange = {'name': 'LowMidrange',
                'freq_sweetspot': 300,
                'step_size': 30,
                'weight': 4,
-               'num_freqs_to_include': 1
+               'num_freqs_to_include': 1,
+               'freqs': [300]
                }
 
 Midrange = {'name': 'Midrange',
@@ -55,7 +55,9 @@ Midrange = {'name': 'Midrange',
             'freq_sweetspot': 1000,
             'step_size': 180,
             'weight': 8,
-            'num_freqs_to_include': 2
+            'num_freqs_to_include': 2,
+            'freqs': [500, 1000]
+            #'freqs': [500]
             }
 
 UpperMidrange = {'name': 'UpperMidrange',
@@ -64,7 +66,9 @@ UpperMidrange = {'name': 'UpperMidrange',
                  'freq_sweetspot': 2500,
                  'step_size': 250,
                  'weight': 16,
-                 'num_freqs_to_include': 2
+                 'num_freqs_to_include': 0,
+                 'freqs': [2500, 3500]
+                 #'freqs': [2000]
                  }
 
 Presence = {'name': 'Presence',
@@ -73,16 +77,18 @@ Presence = {'name': 'Presence',
             'freq_sweetspot': 5000,
             'step_size': 250,
             'weight': 32,
-            'num_freqs_to_include': 1
+            'num_freqs_to_include': 1,
+            'freqs': [5000]
             }
 
 Brilliance = {'name': 'Brilliance',
               'freq_low': 6001,
-              'freq_high':20000,
+              'freq_high': 20000,
               'freq_sweetspot': 12000,
               'step_size': 1500,
               'weight': 64,
-              'num_freqs_to_include': 1
+              'num_freqs_to_include': 1,
+              'freqs': [12000]
               }
 
 HiFi_ascending = [SubBass, Bass, LowMidrange, Midrange, UpperMidrange, Presence, Brilliance]
@@ -102,20 +108,18 @@ class AudioFile:
         self.chunk_levels = [0, 0, 0, 0, 0, 0, 0, 0]
         self.IsPlaying = False
 
-        _wf = wave.open(afile, 'rb')
-        _p = pyaudio.PyAudio()
+        # Open the wave file
+        self.wave_file = wave.open(afile, 'rb')
+        self.nchannels = self.wave_file.getnchannels()
+        self.frame_rate = self.wave_file.getframerate()
+        self.sample_width = self.wave_file.getsampwidth()
 
-        self.wave_file = _wf
-        self._pa_object = _p
-        self.sample_width = _wf.getsampwidth()
-        self.format = _p.get_format_from_width(self.sample_width)
-        self.nchannels = _wf.getnchannels()
-        self.frame_rate = _wf.getframerate()
-
-        self._astream = _p.open(format=self.format,
-                           channels=self.nchannels,
-                           rate=self.frame_rate,
-                           output=True)
+        # prepare audio for output
+        self.audio_output = aa.PCM(aa.PCM_PLAYBACK, aa.PCM_NORMAL)
+        self.audio_output.setchannels(self.nchannels)
+        self.audio_output.setrate(self.frame_rate)
+        self.audio_output.setformat(aa.PCM_FORMAT_S16_LE)
+        self.audio_output.setperiodsize(achunk)
 
 
     def read_chunk(self):
@@ -124,19 +128,109 @@ class AudioFile:
 
     def read_analyze_chunk(self, frqs=DEFAULT_FREQUENCIES, wghts=DEFAULT_FREQ_WEIGHT):
         _wdata = self.wave_file.readframes(self.chunk_size)
-        #self.chunk_levels.clear()
+        self.chunk_levels.clear()
         self.chunk_levels = calculate_levels(_wdata, self.chunk_size, self.frame_rate, frqs, wghts)
         return _wdata
 
     def write_chunk(self, adata):
-        self._astream.write(adata)
+        self.audio_output.write(adata)
 
     def stop(self):
-        self._astream.stop_stream()
-        self._astream.close()
-        self._pa_object.terminate()
+        self.audio_output.close()
+        self.wave_file.close()
 
 # End AudioFile Class
+##################################################################
+
+##################################################################
+class Signals:
+
+    def __init__(self, type="hifi", frequencies=DEFAULT_FREQUENCIES, weights=DEFAULT_FREQ_WEIGHT):
+
+        self.weights = []
+        self.frequencies = []
+        self.fidelities = []
+
+        if type == "manual" and len(frequencies) > 0:
+            self.frequencies = frequencies
+            if len(weights) == len(frequencies):
+                _need_weights = False
+                self.weights = weights
+            else:
+                _need_weights = True
+
+        else:
+            self.frequencies = build_freqs_from_hifi()
+            self.weights = build_weights_from_hifi()
+            _need_weights = False
+
+        self.num_freqs = len(self.frequencies)
+        for i in range(0, self.num_freqs):
+            self.fidelities.append(get_hifi_name_from_freq(self.frequencies[i]))
+            if _need_weights:
+                self.weights.append(get_hifi_name_from_freq(self.frequencies[i]))
+
+
+# End Signals Class
+##################################################################
+
+
+#############################################################################################
+def get_hifi_name_from_freq(frequency):
+
+    # print("Freq:",frequency)
+    for i in range(0, len(HiFi_ascending)):
+
+        if frequency >= HiFi_ascending[i]['freq_low'] and frequency <= HiFi_ascending[i]['freq_high']:
+            # print(" Found:",HiFi_ascending[i]['name'],HiFi_ascending[i]['freq_low'],HiFi_ascending[i]['freq_high'])
+            return HiFi_ascending[i]['name']
+
+    return "UNKNOWN"
+
+# End get_hifi_name_from_freq
+##################################################################
+
+
+#############################################################################################
+def get_hifi_weight_from_freq(frequency):
+
+    for i in range(0, len(HiFi_ascending)):
+
+        if frequency >= HiFi_ascending[i]['freq_low'] and frequency <= HiFi_ascending[i]['freq_high']:
+            return int(HiFi_ascending[i]['weight'])
+
+    return 0
+
+# End get_hifi_name_from_freq
+##################################################################
+
+
+#############################################################################################
+def build_freqs_from_hifi():
+
+    hifi_frequencies = []
+    for i in range(0, len(HiFi_ascending)):
+
+        for j in range(0, HiFi_ascending[i]['num_freqs_to_include']):
+            hifi_frequencies.append(HiFi_ascending[i]['freqs'][j])
+
+    return hifi_frequencies
+
+# End build_freqs_from_hifi
+##################################################################
+
+#############################################################################################
+def build_weights_from_hifi():
+
+    hifi_weights = []
+    for i in range(0, len(HiFi_ascending)):
+
+        for j in range(0, HiFi_ascending[i]['num_freqs_to_include']):
+            hifi_weights.append(HiFi_ascending[i]['weight'])
+
+    return hifi_weights
+
+# End build_freqs_from_hifi
 ##################################################################
 
 
