@@ -113,6 +113,7 @@ class AudioFile:
         self.nchannels = self.wave_file.getnchannels()
         self.frame_rate = self.wave_file.getframerate()
         self.sample_width = self.wave_file.getsampwidth()
+        self.nframes = self.wave_file.getnframes()
 
         # prepare audio for output
         self.audio_output = aa.PCM(aa.PCM_PLAYBACK, aa.PCM_NORMAL)

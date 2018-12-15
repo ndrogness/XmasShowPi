@@ -5,6 +5,8 @@ import board
 import busio
 import digitalio
 import adafruit_si4713
+#from subprocess import Popen, PIPE
+import subprocess
 
 
 class SI4713:
@@ -56,3 +58,35 @@ class SI4713:
     def set_gpio(self, gpio1_on=True, gpio2_on=True):
         # Set GPIO1 and GPIO2 to actively driven outputs.
         self.si4713.gpio_set(gpio1=gpio1_on, gpio2=gpio2_on)
+
+
+class PiGpio4:
+
+    def __init__(self, fm_freq, run_sudo=False):
+
+        self.freq = str(fm_freq)
+        self.run_sudo = run_sudo
+        self.fm_path = '/home/pi/fm_transmitter/fm_transmitter'
+        self.proc = None
+
+    def on(self, audiofile):
+        self.songout = subprocess.Popen(['/usr/bin/sox', audiofile, '-r', '22050', '-c', '1',
+                                         '-b', '16', '-t', 'wav', '-'], stdout=subprocess.PIPE)
+        if self.run_sudo is True:
+            self.proc = subprocess.Popen(['/usr/bin/sudo', self.fm_path, '-f', self.freq, '-'], stdin=self.songout.stdout)
+        else:
+            self.proc = subprocess.Popen([self.fm_path, '-f', self.freq, '-'], stdin=self.songout.stdout)
+        self.songout.stdout.close()
+
+    def write(self, wdata):
+        self.proc.communicate(input=wdata, timeout=5)
+
+    def off(self):
+        if self.run_sudo is False:
+            self.proc.kill()
+        else:
+            self.songout.kill()
+
+    def status(self):
+        # Print out some transmitter state:
+        pass

@@ -13,26 +13,46 @@ GPIO.setwarnings(False)
 ##############################################
 class Outlet:
 
-    def __init__(self, cfg, relay_value_on=0, relay_value_off=1):
+    def __init__(self, cfg, relay_value_on=0, relay_value_off=1, initially_on=False, fire_gpio=True):
         _cfgitems = cfg.split(",")
         self.Name = _cfgitems[0]
         self.RelayGPIO = int(_cfgitems[1])
         self.RelayOn = relay_value_on
         self.RelayOff = relay_value_off
-        self.IsOn = False
+        self.FireGPIO = fire_gpio
+
+        self.Options = {}
+        _outlet_options = _cfgitems[2].split("|")
+        for _outlet_opt_index in range(0, len(_outlet_options)):
+            _outlet_opt = _outlet_options[_outlet_opt_index].split(":")
+            self.Options[_outlet_opt[0]] = _outlet_opt[1]
 
         GPIO.setup(self.RelayGPIO, GPIO.OUT)
-        GPIO.output(self.RelayGPIO, self.RelayOff)
+
+        if initially_on is True:
+            if self.FireGPIO is True:
+                GPIO.output(self.RelayGPIO, self.RelayOn)
+            self.IsOn = True
+        else:
+            if self.FireGPIO is True:
+                GPIO.output(self.RelayGPIO, self.RelayOff)
+            self.IsOn = False
 
     def on(self):
         if not self.IsOn:
-            GPIO.output(self.RelayGPIO, self.RelayOn)
+            if self.FireGPIO is True:
+                GPIO.output(self.RelayGPIO, self.RelayOn)
             self.IsOn = True
+        # GPIO.output(self.RelayGPIO, self.RelayOn)
+        # self.IsOn = True
 
     def off(self):
         if self.IsOn:
-            GPIO.output(self.RelayGPIO, self.RelayOff)
+            if self.FireGPIO is True:
+                GPIO.output(self.RelayGPIO, self.RelayOff)
             self.IsOn = False
+        # GPIO.output(self.RelayGPIO, self.RelayOff)
+        # self.IsOn = False
 
 ### End Outlet class
 ##########################################################
@@ -86,29 +106,57 @@ class Sequence:
 
         # Build participating Outlets
         self.outlets = []
+        self.num_outlets = 0
         _outlet_list = seq_items[4].split("&")
         for i in range(0, len(_outlet_list)):
             self.outlets.append(_outlet_list[i])
+            self.num_outlets += 1
 
     def __str__(self):
         return self.seq_cfg
 
     def should_trigger(self, signal_data):
+
+        retval = False
+
         for i in range(0, self.num_signals):
             pos = self.signal_index[i]
+
+            on_status = False
 
             for oper, val in self.on_at.items():
                 ival = int(val)
                 if oper == 'lt' and signal_data[pos] < ival:
-                    return True
+                    on_status = True
                 elif oper == 'le' and signal_data[pos] <= ival:
-                    return True
+                    on_status = True
                 elif oper == 'eq' and signal_data[pos] == ival:
-                    return True
+                    on_status = True
                 elif oper == 'gt' and signal_data[pos] > ival:
-                    return True
+                    on_status = True
                 elif oper == 'ge' and signal_data[pos] >= ival:
+                    on_status = True
+
+            if on_status is True:
+                # Verify we haven't cross the upper shutoff value
+                off_status = False
+                for oper, val in self.off_at.items():
+                    ival = int(val)
+                    if oper == 'lt' and signal_data[pos] < ival:
+                        off_status = True
+                    elif oper == 'le' and signal_data[pos] <= ival:
+                        off_status = True
+                    elif oper == 'eq' and signal_data[pos] == ival:
+                        off_status = True
+                    elif oper == 'gt' and signal_data[pos] > ival:
+                        off_status = True
+                    elif oper == 'ge' and signal_data[pos] >= ival:
+                        off_status = True
+
+                if off_status is not True:
                     return True
+
+            retval = on_status
 
         return False
 
@@ -122,15 +170,78 @@ class Toggle(Sequence):
     def __init__(self, name, sequence_cfg, fidelities):
         super().__init__(sequence_cfg, fidelities)
         self.name = name
+        self.cur_outlets_on = []
+        self.cur_outlets_off = []
 
-    def check(self, signal_data):
+    def check(self, signal_data, seq_debug=False):
+        self.cur_outlets_on.clear()
+        self.cur_outlets_off.clear()
+
         if self.should_trigger(signal_data):
-            print(signal_data, self.name, " -> fire")
-            return True
-        else:
-            return False
+            self.cur_outlets_on = self.outlets[:]
+            self.cur_outlets_off.clear()
 
-### End Sequence class
+            if seq_debug is True:
+                print(signal_data, self.name, "toggle -> on:", self.cur_outlets_on, ", off:", self.cur_outlets_off)
+
+            self.IsOn = True
+            return True
+
+        else:
+            self.cur_outlets_on.clear()
+            self.cur_outlets_off = self.outlets[:]
+
+            # Need to shut stuff off
+            if self.IsOn is True:
+                self.IsOn = False
+                return True
+            else:
+                return False
+
+### End Toggle class
+##########################################################
+
+##########################################################
+class Cycle(Sequence):
+
+    def __init__(self, name, sequence_cfg, fidelities):
+        super().__init__(sequence_cfg, fidelities)
+        self.name = name
+        self.cur_outlets_on = []
+        self.cur_outlets_off = []
+        self.next_outlet_index = 0
+
+    def check(self, signal_data, seq_debug=False):
+        self.cur_outlets_on.clear()
+        self.cur_outlets_off.clear()
+
+        if self.should_trigger(signal_data):
+
+            for i in range(0, self.num_outlets):
+                if i == self.next_outlet_index:
+                    self.cur_outlets_on.append(self.outlets[i])
+                else:
+                    self.cur_outlets_off.append(self.outlets[i])
+
+            self.next_outlet_index += 1
+            if self.next_outlet_index >= self.num_outlets:
+                self.next_outlet_index = 0
+
+            if seq_debug is True:
+                print(signal_data, self.name, "cycle -> on:", self.cur_outlets_on, ", off:", self.cur_outlets_off)
+
+            self.IsOn = True
+            return True
+
+        else:
+            # Need to shut stuff off
+            if self.IsOn is True:
+                self.IsOn = False
+                return True
+            else:
+                return False
+
+### End Toggle class
 ##########################################################
 
 
@@ -188,7 +299,12 @@ def read_config(cfgfile='XmasShowPi.cfg', debug=False):
     # Defaults
     config_data = {'songs_dir': 'songs',
                    'start_time_hour': datetime.time(hour=17),
-                   'duration_hours': 5}
+                   'duration_hours': 5,
+                   'outlet_idle_status': False,
+                   'rf_sudo': False,
+                   'outlets_enable': True,
+                   'debug': False
+                   }
 
     outlets = []
     sequences = []
@@ -211,6 +327,7 @@ def read_config(cfgfile='XmasShowPi.cfg', debug=False):
             outlet_cfg['cfgline'] = cline[1]
             outlet_cfg['name'] = outlet_line[0]
             outlet_cfg['GPIO'] = outlet_line[1]
+            outlet_cfg['out_options'] = outlet_line[2]
 
             outlets.append(outlet_cfg)
             num_tokens += 1
@@ -231,16 +348,49 @@ def read_config(cfgfile='XmasShowPi.cfg', debug=False):
             config_data['songs_dir'] = cline[1]
             num_tokens += 1
 
-        if cline[0] == 'START_TIME_HOUR':
-            # print("Found Start time:", cline[1])
-            config_data['start_time_hour_text'] = cline[1]
-            config_data['start_time_hour'] = datetime.time(hour=int(cline[1]))
+        if cline[0] == 'LIGHTS_ON_AT_HOUR':
+            # print("Found Lights on time:", cline[1])
+            config_data['lights_on_at_hour_text'] = cline[1]
+            config_data['lights_on_at_hour'] = datetime.time(hour=int(cline[1]))
             num_tokens += 1
 
-        if cline[0] == 'DURATION_HOURS':
-            # print("Found duration hours:", cline[1])
-            config_data['duration_hours'] = int(cline[1])
+        if cline[0] == 'LIGHTS_OFF_AT_HOUR':
+            # print("Found Lights on time:", cline[1])
+            config_data['lights_off_at_hour_text'] = cline[1]
+            config_data['lights_off_at_hour'] = datetime.time(hour=int(cline[1]))
             num_tokens += 1
+
+        if cline[0] == 'SHOW_START_TIME_HOUR':
+            # print("Found Start time:", cline[1])
+            config_data['show_start_time_hour_text'] = cline[1]
+            config_data['show_start_time_hour'] = datetime.time(hour=int(cline[1]))
+            num_tokens += 1
+
+        if cline[0] == 'SHOW_DURATION_HOURS':
+            # print("Found duration hours:", cline[1])
+            config_data['show_duration_hours'] = int(cline[1])
+            num_tokens += 1
+
+        if cline[0] == 'OUTLET_STATUS_WHEN_IDLE':
+            # print("Found Outlet Status:", cline[1])
+            if cline[1] == 'ON':
+                config_data['outlet_idle_status'] = True
+            num_tokens += 1
+
+        if cline[0] == 'RF_SUDO':
+            # print("Found RF Sudo:", cline[1])
+            if cline[1] == 'ON':
+                config_data['rf_sudo'] = True
+
+        if cline[0] == 'OUTLETS_ENABLE':
+            # print("Found Outlets enable:", cline[1])
+            if cline[1] == 'OFF':
+                config_data['outlets_enable'] = False
+
+        if cline[0] == 'DEBUG':
+            # print("Found Outlet Status:", cline[1])
+            if cline[1] == 'ON':
+                config_data['debug'] = True
 
         if cline[0] == 'SEQUENCE':
             # print("Found Sequence:", cline[1])
@@ -251,7 +401,7 @@ def read_config(cfgfile='XmasShowPi.cfg', debug=False):
             sequence_cfg['cfgline'] = cline[1]
             sequence_cfg['name'] = seq_line[0]
             sequence_cfg['type'] = seq_line[1]
-            sequence_cfg['seq_cfg'] = seq_line[2]
+            sequence_cfg['seq_options'] = seq_line[2]
 
             sequences.append(sequence_cfg)
             num_sequences += 1
