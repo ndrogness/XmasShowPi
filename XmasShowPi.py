@@ -96,13 +96,19 @@ def reset_outlets(show_is_running=False):
     lights_can_be_on = check_lights_time()
 
     for r_outlet, o_obj in outlets.items():
-        if show_is_running is False and lights_can_be_on is True:
-            outlets[r_outlet].on()
-            state['LIGHTS_ON'] = True
+        if show_is_running is False:
 
-        elif show_is_running is True and outlets[r_outlet].Options['trigger'] == 'show':
+            if lights_can_be_on is True and outlets[r_outlet].Options['trigger'] != 'show':
+                outlets[r_outlet].on()
+                state['LIGHTS_ON'] = True
+            else:
+                outlets[r_outlet].off()
+
+        elif outlets[r_outlet].Options['trigger'] == 'show':
             outlets[r_outlet].on()
-            # print("Show Time outlet on:", outlets[r_outlet].Name)
+
+            if cfg['debug'] is True:
+                print("Show Time outlet on:", outlets[r_outlet].Name)
 
         else:
             outlets[r_outlet].off()
