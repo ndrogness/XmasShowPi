@@ -68,10 +68,16 @@ class PiGpio4:
         self.run_sudo = run_sudo
         self.fm_path = '/home/pi/fm_transmitter/fm_transmitter'
         self.proc = None
+        self.is_running = False
 
     def on(self, audiofile):
+
+        if self.is_running is True:
+            self.off()
+
         self.songout = subprocess.Popen(['/usr/bin/sox', audiofile, '-r', '22050', '-c', '1',
                                          '-b', '16', '-t', 'wav', '-'], stdout=subprocess.PIPE)
+        self.is_running = True
         if self.run_sudo is True:
             self.proc = subprocess.Popen(['/usr/bin/sudo', self.fm_path, '-f', self.freq, '-'], stdin=self.songout.stdout)
         else:
@@ -82,6 +88,10 @@ class PiGpio4:
         self.proc.communicate(input=wdata, timeout=5)
 
     def off(self):
+        if self.is_running is False:
+            return
+
+        self.is_running = False
         if self.run_sudo is False:
             self.proc.kill()
         else:

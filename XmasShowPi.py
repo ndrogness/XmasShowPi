@@ -223,6 +223,7 @@ def xmas_show_start():
                 chunk_counter += 1
 
             audio_file.stop()
+            radio.off()
 
         else:
 
@@ -232,8 +233,9 @@ def xmas_show_start():
 
             dmsg = state['show_start_time'].strftime("Run %m/%d @ %I%p")
             # print(dmsg)
-            reset_outlets()
             # display.print(dmsg, 1, 0)
+            radio.off()
+            reset_outlets()
 
     state['SHOW_IS_RUNNING'] = False
 
@@ -339,6 +341,8 @@ if __name__ == '__main__':
             if loop_counter % 30 == 0:
                 print(state['last_show_time_check_detail'])
                 syslog.syslog(state['last_show_time_check_detail'])
+                cfg = xs.read_config()
+                playlist = xs.build_playlist(cfg['songs_dir'])
 
             time.sleep(10)
             loop_counter += 1

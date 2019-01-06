@@ -65,7 +65,7 @@ UpperMidrange = {'name': 'UpperMidrange',
                  'freq_high': 4000,
                  'freq_sweetspot': 2500,
                  'step_size': 250,
-                 'weight': 16,
+                 'weight': 32,
                  'num_freqs_to_include': 0,
                  'freqs': [2500, 3500]
                  #'freqs': [2000]
@@ -146,13 +146,13 @@ class AudioFile:
 ##################################################################
 class Signals:
 
-    def __init__(self, type="hifi", frequencies=DEFAULT_FREQUENCIES, weights=DEFAULT_FREQ_WEIGHT):
+    def __init__(self, stype="hifi", frequencies=DEFAULT_FREQUENCIES, weights=DEFAULT_FREQ_WEIGHT):
 
         self.weights = []
         self.frequencies = []
         self.fidelities = []
 
-        if type == "manual" and len(frequencies) > 0:
+        if stype == "manual" and len(frequencies) > 0:
             self.frequencies = frequencies
             if len(weights) == len(frequencies):
                 _need_weights = False

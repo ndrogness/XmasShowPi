@@ -68,10 +68,7 @@ class Sequence:
 
         # Bass|ge:7|lt:7||Out1&Out16
         if len(sequence_cfg) < 5:
-            seq_items[0] = 'Bass'
-            seq_items[1] = 'ge:7'
-            seq_items[2] = 'lt:7'
-            seq_items[3] = 'Out1'
+            seq_items = ['Bass', 'ge:7', 'lt:7', '', 'Out1']
         else:
             seq_items = sequence_cfg.split("|")
 
@@ -262,7 +259,7 @@ def build_playlist(songs_dir, debug=False):
 
     songs = []
     if not os.path.exists(songs_dir):
-        return (songs)
+        return songs
 
     for dfile in os.listdir(songs_dir):
         pfile = "%s/%s" % (songs_dir, dfile)
@@ -270,7 +267,8 @@ def build_playlist(songs_dir, debug=False):
             #print("Song is:", pfile)
             songs.append(pfile)
 
-    return(songs)
+    return songs
+
 ##############################################
 
 #################################################################
