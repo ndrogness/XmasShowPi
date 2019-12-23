@@ -3,6 +3,7 @@
 import sys
 import os
 import alsaaudio as aa
+import pyaudio
 import wave
 from struct import unpack
 import numpy as np
@@ -66,7 +67,7 @@ UpperMidrange = {'name': 'UpperMidrange',
                  'freq_sweetspot': 2500,
                  'step_size': 250,
                  'weight': 32,
-                 'num_freqs_to_include': 0,
+                 'num_freqs_to_include': 2,
                  'freqs': [2500, 3500]
                  #'freqs': [2000]
                  }
@@ -116,12 +117,19 @@ class AudioFile:
         self.nframes = self.wave_file.getnframes()
 
         # prepare audio for output
-        self.audio_output = aa.PCM(aa.PCM_PLAYBACK, aa.PCM_NORMAL)
-        self.audio_output.setchannels(self.nchannels)
-        self.audio_output.setrate(self.frame_rate)
-        self.audio_output.setformat(aa.PCM_FORMAT_S16_LE)
-        self.audio_output.setperiodsize(achunk)
 
+        # ALSA setup
+        #self.audio_output = aa.PCM(aa.PCM_PLAYBACK, aa.PCM_NORMAL)
+        #self.audio_output.setchannels(self.nchannels)
+        #self.audio_output.setrate(self.frame_rate)
+        #self.audio_output.setformat(aa.PCM_FORMAT_S16_LE)
+        #self.audio_output.setperiodsize(achunk)
+
+        #PyAudio setup
+        self.pa = pyaudio.PyAudio()
+        # open stream
+        self.audio_output = self.pa.open(format=self.pa.get_format_from_width(self.sample_width), channels=self.nchannels,
+                                    rate=self.frame_rate, output=True)
 
     def read_chunk(self):
         _wdata = self.wave_file.readframes(self.chunk_size)
@@ -134,11 +142,18 @@ class AudioFile:
         return _wdata
 
     def write_chunk(self, adata):
-        self.audio_output.write(adata)
+        try:
+            self.audio_output.write(adata)
+        except:
+            print("Error playing Audio IO Error in stream write")
+            return False
+        return True
 
     def stop(self):
+        self.audio_output.stop_stream()
         self.audio_output.close()
         self.wave_file.close()
+        self.pa.terminate()
 
 # End AudioFile Class
 ##################################################################

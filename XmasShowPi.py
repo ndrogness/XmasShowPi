@@ -1,79 +1,84 @@
 #!/usr/bin/env python3
 
-from multiprocessing import Process
 import os
 import sys
 import time
 import datetime
 import syslog
-import XmasShowPiUtils as xs
+import random
 import RogyAudio
-import RogyDisplay
-import RogyRadio
+import RogySequencer
 
 # Global list of objects
-outlets = []
-#playlist = []
-state = {'DO_RUN': True, 'LIGHTS_ON': False, 'SHOW_IS_RUNNING': False}
+STATE = {'DO_RUN': True, 'LIGHTS_ON': False, 'SHOW_IS_RUNNING': False, 'last_show_time_check_detail': 'Never checked'}
 
-###########################################################################
+
 def check_show_time():
+    '''
+    Check if it is time to start the show
+    :return: True if the show can start, False otherwise
+    '''
 
+    global STATE
     now_datetime = datetime.datetime.now()
 
     show_start_time = datetime.datetime.combine(now_datetime, cfg['show_start_time_hour'])
     show_end_time = show_start_time + datetime.timedelta(hours=cfg['show_duration_hours'])
 
-    # Update state times if needed
-    if 'show_start_time' not in state:
+    # Update STATE times if needed
+    if 'show_start_time' not in STATE:
         if now_datetime > show_end_time:
             show_start_time = show_start_time + datetime.timedelta(days=1)
             show_end_time = show_end_time + datetime.timedelta(days=1)
 
     else:
-        if now_datetime < state['show_end_time']:
-            show_start_time = state['show_start_time']
-            show_end_time = state['show_end_time']
+        if now_datetime < STATE['show_end_time']:
+            show_start_time = STATE['show_start_time']
+            show_end_time = STATE['show_end_time']
         else:
             show_start_time = show_start_time + datetime.timedelta(days=1)
             show_end_time = show_end_time + datetime.timedelta(days=1)
 
-    state['show_start_time'] = show_start_time
-    state['show_end_time'] = show_end_time
-    run_time_txt = '(' + state['show_start_time'].strftime("%m/%d %I%p") + '->' + state['show_end_time'].strftime("%m/%d %I%p") + ')'
+    STATE['show_start_time'] = show_start_time
+    STATE['show_end_time'] = show_end_time
+    # run_time_txt = '(' + STATE['show_start_time'].strftime("%m/%d %I%p") + '->' +
+    # STATE['show_end_time'].strftime("%m/%d %I%p") + ')'
+    run_time_txt = '({0} -> {1})'.format(STATE['show_start_time'].strftime("%m/%d %I%p"),
+                                         STATE['show_end_time'].strftime("%m/%d %I%p"))
 
-    #print(show_start_time)
-    #print(show_end_time)
+    if STATE['SHOW_IS_RUNNING'] is not True:
 
-    if not state['SHOW_IS_RUNNING']:
-
-        if now_datetime >= show_start_time and now_datetime < show_end_time:
-            state['last_show_time_check'] = now_datetime
-            state['last_show_time_check_detail'] = run_time_txt + ' Not Running: inside allowable time -> Starting'
-
+        # Show is not running and we can start the show
+        if show_start_time <= now_datetime < show_end_time:
+            STATE['last_show_time_check'] = now_datetime
+            STATE['last_show_time_check_detail'] = run_time_txt + ' Not Running: inside allowable time -> Starting'
             return True
 
         else:
-            state['last_show_time_check'] = now_datetime
-            state['last_show_time_check_detail'] = run_time_txt + ' Not Running: outside allowable time'
+            # time now is not between defined showtime
+            STATE['last_show_time_check'] = now_datetime
+            STATE['last_show_time_check_detail'] = run_time_txt + ' Not Running: outside allowable time'
             return False
 
     else:
-        if now_datetime >= show_start_time and now_datetime < show_end_time:
-            state['last_show_time_check'] = now_datetime
-            state['last_show_time_check_detail'] = run_time_txt + ' Running: inside allowable time'
+
+        # Show is running and we can continue
+        if show_start_time <= now_datetime < show_end_time:
+            STATE['last_show_time_check'] = now_datetime
+            STATE['last_show_time_check_detail'] = run_time_txt + ' Running: inside allowable time'
             return True
         else:
-            state['last_show_time_check'] = now_datetime
-            state['last_show_time_check_detail'] = run_time_txt + ' Running: outside allowable time'
+            # Show is running and we must stop it
+            STATE['last_show_time_check'] = now_datetime
+            STATE['last_show_time_check_detail'] = run_time_txt + ' Running: outside allowable time'
             return False
 
-#### End check_show_time
-###########################################################################
 
-
-###########################################################################
 def check_lights_time():
+    '''
+    Check if lights can be on or not
+    :return: True if lights can be on, False otherwise
+    '''
 
     now_datetime = datetime.datetime.now()
 
@@ -86,98 +91,27 @@ def check_lights_time():
     else:
         return False
 
-### End check_lights_time
-###########################################################################
 
+def xmas_show_start(songs_playlist, debug=False):
+    '''
+    Start the xmas show, i.e. loop through playlist and process
+    :param songs_playlist: list of songs to process, i.e. playlist
+    :param debug: print additional debugging
+    :return: True is full playlist was processed, otherwise false
+    '''
 
-###########################################################################
-def reset_outlets(show_is_running=False):
+    global STATE
+    retval = True
 
-    lights_can_be_on = check_lights_time()
-
-    for r_outlet, o_obj in outlets.items():
-        if show_is_running is False:
-
-            if lights_can_be_on is True and outlets[r_outlet].Options['trigger'] != 'show':
-                outlets[r_outlet].on()
-                state['LIGHTS_ON'] = True
-            else:
-                outlets[r_outlet].off()
-
-        elif outlets[r_outlet].Options['trigger'] == 'show':
-            outlets[r_outlet].on()
-
-            if cfg['debug'] is True:
-                print("Show Time outlet on:", outlets[r_outlet].Name)
-
-        else:
-            outlets[r_outlet].off()
-            state['LIGHTS_ON'] = False
-
-
-### End init_sequences
-###########################################################################
-
-
-###########################################################################
-def sequence_check(signal_data, delay=0):
-
-    debug_msg = ''
-    sequence_hit_counter = 0
-
-    for sname, sobj in sequences.items():
-        '''if sobj.check(signal_data, seq_debug=cfg['debug']):
-            if delay > 0:
-                time.sleep(delay)
-
-            for s_outlet in range(0, len(sobj.outlets)):
-                if sobj.outlets[s_outlet] in outlets:
-                    outlets[sobj.outlets[s_outlet]].on()
-        else:
-            for s_outlet in range(0, len(sobj.outlets)):
-                if sobj.outlets[s_outlet] in outlets:
-                    outlets[sobj.outlets[s_outlet]].off()
-        '''
-        #did_hit = sobj.check(signal_data, seq_debug=cfg['debug'])
-        do_process_sequence = sobj.check(signal_data)
-        if do_process_sequence is not True:
-            continue
-
-        sequence_hit_counter += 1
-        # print("firing", sobj.cur_outlets_on)
-
-        if cfg['debug'] is True:
-            if len(sobj.cur_outlets_on) > 0:
-                debug_msg += ', ' + str(sname) + '-> ('
-
-        for s_outlet in range(0, len(sobj.outlets)):
-
-            if sobj.outlets[s_outlet] not in outlets:
-                continue
-
-            if sobj.outlets[s_outlet] in sobj.cur_outlets_on:
-                outlets[sobj.outlets[s_outlet]].on()
-                if cfg['debug'] is True:
-                    debug_msg += ',' + str(sobj.outlets[s_outlet])
-
-            else:
-                outlets[sobj.outlets[s_outlet]].off()
-
-        if cfg['debug'] is True:
-            if len(sobj.cur_outlets_on) > 0:
-                debug_msg += ')'
-
-    if debug_msg != '' and cfg['debug'] is True:
-        print(signal_data, debug_msg)
-
-#### End sequence_check
-###########################################################################
-
-###########################################################################
-def xmas_show_start():
+    if len(songs_playlist) < 1:
+        print('Warning, no songs to play...missing songs dir?:', cfg['songs_dir'])
+        return False
 
     # Loop through the playlist and play each song
-    for song_index in range(0, len(playlist)):
+    for song_index in range(0, len(songs_playlist)):
+
+        # Reset the sequencer before each song
+        sr.reset()
 
         # Better make sure the time specified in the config
         # allows us to play the song
@@ -185,14 +119,12 @@ def xmas_show_start():
 
         if can_play_song is True:
 
+            if STATE['SHOW_IS_RUNNING'] is False and song_index == 0:
+                sr.start()
+                print(STATE['last_show_time_check_detail'])
+                syslog.syslog(STATE['last_show_time_check_detail'])
 
-            if state['SHOW_IS_RUNNING'] is False and song_index == 0:
-                print(state['last_show_time_check_detail'])
-                syslog.syslog(state['last_show_time_check_detail'])
-
-            state['SHOW_IS_RUNNING'] = True
-
-            reset_outlets(show_is_running=True)
+            STATE['SHOW_IS_RUNNING'] = True
 
             # init Audio File object
             audio_file = RogyAudio.AudioFile(playlist[song_index])
@@ -200,116 +132,194 @@ def xmas_show_start():
                   audio_file.nchannels, audio_file.frame_rate,
                   audio_file.sample_width)
 
-            # Turn on radio
-            radio.on(playlist[song_index])
-            time.sleep(.400)
-
-            #display.print(playlist[song_index], 1, 0)
-
+            # Run Audio analysis on it, i.e. FFT
             audio_data = audio_file.read_analyze_chunk(frqs=freqs, wghts=weights)
-            chunk_counter = 1
             # print(sys.getsizeof(audio_data))
+
+            # Loop through Audio file one chunk at a time to process
+            chunk_counter = 1
             while sys.getsizeof(audio_data) > 16000:
 
                 # if chunk_counter % 2 == 0:
                 # RogyAudio.print_levels(audio_file.chunk_levels)
                 #print(audio_file.chunk_levels)
 
-                sequence_check(audio_file.chunk_levels)
-
-                audio_file.write_chunk(audio_data)
+                # Write out the audio and then pass to Sequencer for processing
+                if audio_file.write_chunk(audio_data) is True:
+                    sr.check(audio_file.chunk_levels)
+                else:
+                    continue
+                    # raise IOError
 
                 audio_data = audio_file.read_analyze_chunk(frqs=freqs, wghts=weights)
                 chunk_counter += 1
 
             audio_file.stop()
-            radio.off()
 
+        # Can't play next song in playlist (show is over folks!)
         else:
 
-            if state['SHOW_IS_RUNNING'] is True and song_index == 0:
-                print(state['last_show_time_check_detail'])
-                syslog.syslog(state['last_show_time_check_detail'])
+            # Stop the sequencer status
+            sr.stop()
+            if STATE['SHOW_IS_RUNNING'] is True and song_index == 0:
+                print(STATE['last_show_time_check_detail'])
+                syslog.syslog(STATE['last_show_time_check_detail'])
+                retval = False
 
-            dmsg = state['show_start_time'].strftime("Run %m/%d @ %I%p")
-            # print(dmsg)
-            # display.print(dmsg, 1, 0)
-            radio.off()
-            reset_outlets()
+            if debug is True:
+                dmsg = STATE['show_start_time'].strftime("Run %m/%d @ %I%p")
+                print(dmsg)
 
-    state['SHOW_IS_RUNNING'] = False
-
-### End xmas_show_start
-###########################################################################
-
-
-###########################################################################
-def init_sequences():
-
-    i_sequences = {}
-
-    # Build list of sequences
-    for i in range(0, cfg['num_sequences']):
-
-        if cfg['sequences'][i]['type'] == "Toggle":
-            tseq = xs.Toggle(cfg['sequences'][i]['name'],
-                             cfg['sequences'][i]['seq_options'],
-                             signals.fidelities
-                             )
-            i_sequences[cfg['sequences'][i]['name']] = tseq
-
-        if cfg['sequences'][i]['type'] == "Cycle":
-            tseq = xs.Cycle(cfg['sequences'][i]['name'],
-                             cfg['sequences'][i]['seq_options'],
-                             signals.fidelities
-                             )
-            i_sequences[cfg['sequences'][i]['name']] = tseq
+    STATE['SHOW_IS_RUNNING'] = False
+    return retval
 
 
-    return i_sequences
+def read_config(cfgfile='XmasShowPi.cfg', debug=False):
+    '''
+    Read Configuration File
+    :param cfgfile: filename of config file, default: XmasShowPi.cfg
+    :param debug: print debugging
+    :return: config dictionary
+    '''
 
-### End init_sequences
-###########################################################################
+    # Defaults
+    config_data = {'songs_dir': 'songs',
+                   'start_time_hour': datetime.time(hour=17),
+                   'duration_hours': 5,
+                   'outlet_idle_status': False,
+                   'rf_sudo': False,
+                   'outlets_enable': True,
+                   'debug': False
+                   }
+
+    num_tokens = 0
+    # valid_tokens = ['RF_FREQ', 'SONGS_DIR', 'LIGHTS_ON_AT_HOUR', 'LIGHTS_OFF_AT_HOUR', 'SHOW_START_TIME_HOUR']
+
+    with open(cfgfile, mode='r') as f:
+        configlines = f.read().splitlines()
+    f.close()
+
+    for i in range(0, len(configlines)):
+        if debug is True:
+            print('Processing config file line {0}: {1}'.format(i, configlines[i]))
+
+        cline = configlines[i].split("=")
+
+        if cline[0] == 'RF_FREQ':
+            # print("Found RF Frequency:", cline[1])
+            config_data['RF_FREQ'] = float(cline[1])
+            num_tokens += 1
+
+        if cline[0] == 'SONGS_DIR':
+            # print("Found Songs dir:", cline[1])
+            config_data['songs_dir'] = cline[1]
+            num_tokens += 1
+
+        if cline[0] == 'LIGHTS_ON_AT_HOUR':
+            # print("Found Lights on time:", cline[1])
+            config_data['lights_on_at_hour_text'] = cline[1]
+            config_data['lights_on_at_hour'] = datetime.time(hour=int(cline[1]))
+            num_tokens += 1
+
+        if cline[0] == 'LIGHTS_OFF_AT_HOUR':
+            # print("Found Lights on time:", cline[1])
+            config_data['lights_off_at_hour_text'] = cline[1]
+            config_data['lights_off_at_hour'] = datetime.time(hour=int(cline[1]))
+            num_tokens += 1
+
+        if cline[0] == 'SHOW_START_TIME_HOUR':
+            # print("Found Start time:", cline[1])
+            config_data['show_start_time_hour_text'] = cline[1]
+            config_data['show_start_time_hour'] = datetime.time(hour=int(cline[1]))
+            num_tokens += 1
+
+        if cline[0] == 'SHOW_DURATION_HOURS':
+            # print("Found duration hours:", cline[1])
+            config_data['show_duration_hours'] = int(cline[1])
+            num_tokens += 1
+
+        if cline[0] == 'OUTPUTS_STATUS_WHEN_IDLE':
+            # print("Found Outlet Status:", cline[1])
+            if cline[1] == 'ON':
+                config_data['outlet_idle_status'] = True
+            num_tokens += 1
+
+        if cline[0] == 'RF_SUDO':
+            # print("Found RF Sudo:", cline[1])
+            if cline[1] == 'ON':
+                config_data['rf_sudo'] = True
+
+        if cline[0] == 'OUTPUTS_ENABLE':
+            # print("Found Outlets enable:", cline[1])
+            if cline[1] == 'OFF':
+                config_data['outlets_enable'] = False
+
+        if cline[0] == 'DEBUG':
+            # print("Found Outlet Status:", cline[1])
+            if cline[1] == 'ON':
+                config_data['debug'] = True
+
+    # if num_tokens < 3:
+    #     print("Missing XmasShowPi configuration information")
+    #     exit(-2)
+
+    if debug is True:
+        print('Final config data: ', config_data)
+
+    return config_data
 
 
-###########################################################################
-def init_outlets():
+def build_playlist(songs_dir, randomize=True, debug=False):
+    '''
+    Build a playlist from the songs directory
+    :param songs_dir: Directory of wavefile songs
+    :param randomize: Randomize the list of songs
+    :param debug: print debugging
+    :return: list of songs to process
+    '''
 
-    i_outlets = {}
+    songs = []
 
-    # Build dict of Outlets
-    for i in range(0, cfg['num_outlets']):
+    # Check to make sure we have a songs directory
+    if not os.path.exists(songs_dir):
+        print('WARNING: No songs directory:', songs_dir)
+        return songs
 
-        i_outlets[cfg['outlets'][i]['name']] = xs.Outlet(cfg=cfg['outlets'][i]['cfgline'],
-                                                         initially_on=cfg['outlet_idle_status'],
-                                                         fire_gpio=cfg['outlets_enable']
-                                                         )
+    # Loop through songs dir to generate list of songs
+    for dfile in os.listdir(songs_dir):
+        pfile = "%s/%s" % (songs_dir, dfile)
+        if os.path.isfile(pfile):
+            songs.append(pfile)
+            if debug is True:
+                print('Found valid song to add to playlist:', pfile)
 
-    return i_outlets
+    if randomize is True:
+        random.shuffle(songs)
 
-### End init_outlets
-###########################################################################
+    if debug is True:
+        print('Final playlist:', songs)
+
+    return songs
 
 
-###########################################################################
-def HardCleanExit():
-    radio.off()
-    #display.off()
-    reset_outlets()
+def clean_exit():
+    '''
+    Clean things up on exit
+    :return: null
+    '''
+    sr.deinit()
     exit(0)
 
-#### ENd HardCleanExit
-###########################################################################
 
 if __name__ == '__main__':
 
     try:
 
         # Load in config
-        cfg = xs.read_config()
+        cfg = read_config()
 
-        # Get our outlets built
-        outlets = init_outlets()
+        # Load in sequencer
+        sr = RogySequencer.Sequencer(cfgfile='XmasShowPi.cfg', outputs_enable=cfg['outlets_enable'], debug=False)
 
         # Frequencies we're interested in
         signals = RogyAudio.Signals()
@@ -321,37 +331,35 @@ if __name__ == '__main__':
         print("Using Weights:", weights)
         print("Using Fidelities:", fidelities)
 
-        # Get our sequences
-        sequences = init_sequences()
-
-        # init the lcd display
-        # display = RogyDisplay.LCD1602(initial_msg='Xmas Pi Show')
-
         # Build a playlist of songs
-        playlist = xs.build_playlist(cfg['songs_dir'])
-
-        # Grab the RF transmitter
-        # radio = RogyRadio.SI4713(si_reset_gpio=cfg['RF_GPIO'], fm_freq=cfg['RF_FREQ'])
-        radio = RogyRadio.PiGpio4(fm_freq=cfg['RF_FREQ'], run_sudo=cfg['rf_sudo'])
+        # playlist = xs.build_playlist(cfg['songs_dir'])
+        playlist = build_playlist(cfg['songs_dir'])
 
         loop_counter = 0
-        while state['DO_RUN']:
-            xmas_show_start()
+        while STATE['DO_RUN']:
 
+            # Run the show to process all songs in the playlist
+            xmas_show_start(songs_playlist=playlist)
+
+            # Occasionally print/log data
             if loop_counter % 30 == 0:
-                print(state['last_show_time_check_detail'])
-                syslog.syslog(state['last_show_time_check_detail'])
-                cfg = xs.read_config()
-                playlist = xs.build_playlist(cfg['songs_dir'])
+                print(STATE['last_show_time_check_detail'])
+                syslog.syslog(STATE['last_show_time_check_detail'])
+
+                # Reread config
+                cfg = read_config()
+
+                # Refresh playlist of songs
+                playlist = build_playlist(cfg['songs_dir'])
 
             time.sleep(10)
             loop_counter += 1
 
-
     except KeyboardInterrupt:
-        HardCleanExit()
+        clean_exit()
 
     except Exception as e:
         print("Exception:", sys.exc_info()[0], "Argument:", str(e))
-        HardCleanExit()
+        clean_exit()
+
 
