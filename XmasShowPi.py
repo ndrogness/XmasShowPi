@@ -206,62 +206,44 @@ def read_config(cfgfile='XmasShowPi.cfg', debug=False):
         cline = configlines[i].split("=")
 
         if cline[0] == 'RF_FREQ':
-            # print("Found RF Frequency:", cline[1])
             config_data['RF_FREQ'] = float(cline[1])
             num_tokens += 1
 
         if cline[0] == 'SONGS_DIR':
-            # print("Found Songs dir:", cline[1])
             config_data['songs_dir'] = cline[1]
             num_tokens += 1
 
         if cline[0] == 'LIGHTS_ON_AT_HOUR':
-            # print("Found Lights on time:", cline[1])
             config_data['lights_on_at_hour_text'] = cline[1]
             config_data['lights_on_at_hour'] = datetime.time(hour=int(cline[1]))
             num_tokens += 1
 
         if cline[0] == 'LIGHTS_OFF_AT_HOUR':
-            # print("Found Lights on time:", cline[1])
             config_data['lights_off_at_hour_text'] = cline[1]
             config_data['lights_off_at_hour'] = datetime.time(hour=int(cline[1]))
             num_tokens += 1
 
         if cline[0] == 'SHOW_START_TIME_HOUR':
-            # print("Found Start time:", cline[1])
             config_data['show_start_time_hour_text'] = cline[1]
             config_data['show_start_time_hour'] = datetime.time(hour=int(cline[1]))
             num_tokens += 1
 
         if cline[0] == 'SHOW_DURATION_HOURS':
-            # print("Found duration hours:", cline[1])
             config_data['show_duration_hours'] = int(cline[1])
             num_tokens += 1
 
         if cline[0] == 'OUTPUTS_STATUS_WHEN_IDLE':
-            # print("Found Outlet Status:", cline[1])
             if cline[1] == 'ON':
                 config_data['outlet_idle_status'] = True
             num_tokens += 1
 
-        if cline[0] == 'RF_SUDO':
-            # print("Found RF Sudo:", cline[1])
-            if cline[1] == 'ON':
-                config_data['rf_sudo'] = True
-
         if cline[0] == 'OUTPUTS_ENABLE':
-            # print("Found Outlets enable:", cline[1])
             if cline[1] == 'OFF':
                 config_data['outlets_enable'] = False
 
         if cline[0] == 'DEBUG':
-            # print("Found Outlet Status:", cline[1])
             if cline[1] == 'ON':
                 config_data['debug'] = True
-
-    # if num_tokens < 3:
-    #     print("Missing XmasShowPi configuration information")
-    #     exit(-2)
 
     if debug is True:
         print('Final config data: ', config_data)
@@ -319,7 +301,7 @@ if __name__ == '__main__':
         cfg = read_config()
 
         # Load in sequencer
-        sr = RogySequencer.Sequencer(cfgfile='XmasShowPi.cfg', outputs_enable=cfg['outlets_enable'], debug=False)
+        sr = RogySequencer.Sequencer(cfgfile='XmasShowPi.cfg', outputs_enable=cfg['outlets_enable'], debug=cfg['debug'])
 
         # Frequencies we're interested in
         signals = RogyAudio.Signals()
