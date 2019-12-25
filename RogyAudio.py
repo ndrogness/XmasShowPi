@@ -3,7 +3,6 @@
 import sys
 import os
 import alsaaudio as aa
-import pyaudio
 import wave
 from struct import unpack
 import numpy as np
@@ -119,7 +118,7 @@ class AudioFile:
 
         # prepare audio for output
 
-        # Use ALSA setup - Ugh
+        # Use ALSA setup
         if self.use_alsa is True:
             self.audio_output = aa.PCM(aa.PCM_PLAYBACK, aa.PCM_NORMAL)
             self.audio_output.setchannels(self.nchannels)
@@ -127,7 +126,8 @@ class AudioFile:
             self.audio_output.setformat(aa.PCM_FORMAT_S16_LE)
             self.audio_output.setperiodsize(achunk)
         else:
-            # Use Pyaudio
+            # Use Pyaudio vs Alsa(the pyaudio streamer is not good for this, but needed for Bluetooth audio..Ugh)
+            import pyaudio
             self.pa = pyaudio.PyAudio()
             # open stream
             self.audio_output = self.pa.open(format=self.pa.get_format_from_width(self.sample_width),

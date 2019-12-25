@@ -9,7 +9,7 @@ and no manual sequencing/timing is required (its all done through a config file)
 ## Required Python3 Software modules
 adafruit_blinka-> pip3 install adafruit-blinka
 
-pyaudio -> pip3 install pyaudio
+alsaaudio -> pip3 install pyalsaaudio
 
 numpy -> pip3 install numpy
 
