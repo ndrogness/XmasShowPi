@@ -183,10 +183,11 @@ def read_config(cfgfile='XmasShowPi.cfg', debug=False):
 
     # Defaults
     config_data = {'songs_dir': 'songs',
-                   'start_time_hour': datetime.time(hour=17),
-                   'duration_hours': 5,
+                   'lights_on_at_hour': datetime.time(hour=16),
+                   'lights_off_at_hour': datetime.time(hour=20),
+                   'show_start_time_hour': datetime.time(hour=17),
+                   'show_duration_hours': 2,
                    'outlet_idle_status': False,
-                   'rf_sudo': False,
                    'outlets_enable': True,
                    'debug': False
                    }
