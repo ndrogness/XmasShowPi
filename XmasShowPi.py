@@ -104,7 +104,7 @@ def xmas_show_start(songs_playlist, debug=False):
     retval = True
 
     if len(songs_playlist) < 1:
-        print('Warning, no songs to play...missing songs dir?:', cfg['songs_dir'])
+        print('Warning, no songs to play...missing or empty songs dir?:', cfg['songs_dir'])
         return False
 
     # Loop through the playlist and play each song
