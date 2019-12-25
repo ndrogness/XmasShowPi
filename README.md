@@ -14,7 +14,9 @@ alsaaudio -> pip3 install pyalsaaudio
 numpy -> pip3 install numpy
 
 ## Setup Config file
-Edit the XmasShowPi.cfg file
+cp XmasShowPi-example.cfg XmasShowPi.cfg
+
+Edit XmasShowPi.cfg
 
 Define run times
 

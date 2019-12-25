@@ -177,7 +177,7 @@ def xmas_show_start(songs_playlist, debug=False):
 def read_config(cfgfile='XmasShowPi.cfg', debug=False):
     '''
     Read Configuration File
-    :param cfgfile: filename of config file, default: XmasShowPi.cfg
+    :param cfgfile: filename of config file, default: XmasShowPi-example.cfg
     :param debug: print debugging
     :return: config dictionary
     '''
@@ -194,6 +194,10 @@ def read_config(cfgfile='XmasShowPi.cfg', debug=False):
 
     num_tokens = 0
     # valid_tokens = ['RF_FREQ', 'SONGS_DIR', 'LIGHTS_ON_AT_HOUR', 'LIGHTS_OFF_AT_HOUR', 'SHOW_START_TIME_HOUR']
+
+    if not os.path.isfile(cfgfile):
+        print('WARNING: Missing config file:', cfgfile, ', using default config values')
+        return config_data
 
     with open(cfgfile, mode='r') as f:
         configlines = f.read().splitlines()
@@ -301,7 +305,7 @@ if __name__ == '__main__':
         cfg = read_config()
 
         # Load in sequencer
-        sr = RogySequencer.Sequencer(cfgfile='XmasShowPi.cfg', outputs_enable=cfg['outlets_enable'], debug=cfg['debug'])
+        sr = RogySequencer.Sequencer(cfgfile='XmasShowPi-example.cfg', outputs_enable=cfg['outlets_enable'], debug=cfg['debug'])
 
         # Frequencies we're interested in
         signals = RogyAudio.Signals()
