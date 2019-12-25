@@ -98,14 +98,15 @@ HiFi_ascending = [SubBass, Bass, LowMidrange, Midrange, UpperMidrange, Presence,
 ##################################################################
 class AudioFile:
 
-    def __init__(self, afile, type='WAV', achunk=4096):
+    def __init__(self, afile, type='WAV', achunk=4096, use_alsa=True):
 
         if not os.path.exists(afile):
             print("Audio File: ", afile, "not found!")
-            # return()
+            return
 
         self.filename = afile
         self.chunk_size = achunk
+        self.use_alsa = use_alsa
         self.chunk_levels = [0, 0, 0, 0, 0, 0, 0, 0]
         self.IsPlaying = False
 
@@ -118,18 +119,19 @@ class AudioFile:
 
         # prepare audio for output
 
-        # ALSA setup
-        #self.audio_output = aa.PCM(aa.PCM_PLAYBACK, aa.PCM_NORMAL)
-        #self.audio_output.setchannels(self.nchannels)
-        #self.audio_output.setrate(self.frame_rate)
-        #self.audio_output.setformat(aa.PCM_FORMAT_S16_LE)
-        #self.audio_output.setperiodsize(achunk)
-
-        #PyAudio setup
-        self.pa = pyaudio.PyAudio()
-        # open stream
-        self.audio_output = self.pa.open(format=self.pa.get_format_from_width(self.sample_width), channels=self.nchannels,
-                                    rate=self.frame_rate, output=True)
+        # Use ALSA setup - Ugh
+        if self.use_alsa is True:
+            self.audio_output = aa.PCM(aa.PCM_PLAYBACK, aa.PCM_NORMAL)
+            self.audio_output.setchannels(self.nchannels)
+            self.audio_output.setrate(self.frame_rate)
+            self.audio_output.setformat(aa.PCM_FORMAT_S16_LE)
+            self.audio_output.setperiodsize(achunk)
+        else:
+            # Use Pyaudio
+            self.pa = pyaudio.PyAudio()
+            # open stream
+            self.audio_output = self.pa.open(format=self.pa.get_format_from_width(self.sample_width),
+                                             channels=self.nchannels, rate=self.frame_rate, output=True)
 
     def read_chunk(self):
         _wdata = self.wave_file.readframes(self.chunk_size)
@@ -150,10 +152,15 @@ class AudioFile:
         return True
 
     def stop(self):
-        self.audio_output.stop_stream()
-        self.audio_output.close()
+
+        if self.use_alsa is True:
+            self.audio_output.close()
+        else:
+            self.audio_output.stop_stream()
+            self.audio_output.close()
+            self.pa.terminate()
+
         self.wave_file.close()
-        self.pa.terminate()
 
 # End AudioFile Class
 ##################################################################
