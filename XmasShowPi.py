@@ -148,8 +148,7 @@ def xmas_show_start(songs_playlist, debug=False):
                 if audio_file.write_chunk(audio_data) is True:
                     sr.check(audio_file.chunk_levels)
                 else:
-                    continue
-                    # raise IOError
+                    raise IOError
 
                 audio_data = audio_file.read_analyze_chunk(frqs=freqs, wghts=weights)
                 chunk_counter += 1
