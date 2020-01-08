@@ -6,6 +6,8 @@ Grab a Raspberry Pi (probably need a Pi 3+ or greater), an fm transmitter, and w
 to outlets and your set.  Unlike commercial controllers, this Python3 software performs all of the analysis of the music
 and no manual sequencing/timing is required (its all done through a config file).
 
+Checkout the Wiki page for hardware and other notes
+
 ## Required Python3 Software modules
 adafruit_blinka-> pip3 install adafruit-blinka
 
