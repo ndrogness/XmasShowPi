@@ -305,7 +305,7 @@ if __name__ == '__main__':
         cfg = read_config()
 
         # Load in sequencer
-        sr = RogySequencer.Sequencer(cfgfile='XmasShowPi-example.cfg', outputs_enable=cfg['outlets_enable'], debug=cfg['debug'])
+        sr = RogySequencer.Sequencer(cfgfile='XmasShowPi.cfg', outputs_enable=cfg['outlets_enable'], debug=cfg['debug'])
 
         # Frequencies we're interested in
         signals = RogyAudio.Signals()

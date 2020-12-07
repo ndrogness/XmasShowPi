@@ -8,15 +8,27 @@ and no manual sequencing/timing is required (its all done through a config file)
 
 Checkout the Wiki page for hardware and other notes
 
+## Checkout repo
+This is intended to run in /home/pi/XmasShowPi directory
+>shell# cd /home/pi
+> 
+>shell# git clone https://github.com/ndrogness/XmasShowPi.git 
+> 
+>shell# cd XmasShowPi
+
 ## Required Python3 Software modules
-adafruit_blinka-> pip3 install adafruit-blinka
-
-alsaaudio -> pip3 install pyalsaaudio
-
-numpy -> pip3 install numpy
+Install adafruit_blinka, alsaaudio, numpy
+> shell# pip3 install adafruit-blinka
+>
+> shell# pip3 install pyalsaaudio
+>
+> shell# pip3 install numpy
 
 ## Setup Config file
-cp XmasShowPi-example.cfg XmasShowPi.cfg
+Copy example config to main config
+> shell# cd /home/pi/XmasShowPi
+> 
+> shell# cp XmasShowPi-example.cfg XmasShowPi.cfg
 
 Edit XmasShowPi.cfg
 
@@ -28,7 +40,37 @@ Define sequences - these are how defined outlets turn on/off based on thresholds
 
 ## Add music
 Put all Wave file songs in a directory called 'songs' in the current directory (or whatever songs directory is 
-specified in the config file)
+specified in the config file).  Note: Wav files are the only format currently supported.
 
 ## Run
 Run XmasShowPi.py and the outlets will turn on/off in sync with the song being played, based on the sequences defined
+> shell# cd /home/pi/XmasShowPi
+> 
+> shell# python3 XmasShowPi.py
+
+### Run at boot
+Install the xmasshowpi systemd service
+>shell# cd /home/pi/XmasShowPi
+> 
+> shell# sudo cp xmasshowpi_service.sh /usr/local/bin
+> 
+> shell# sudo chmod 755 /usr/local/bin/xmasshowpi_service.sh
+>
+> shell# sudo cp xmasshowpi.service /lib/systemd/system
+> 
+> shell# sudo cp xmasshowpi.service /etc/systemd/system
+>
+> shell# sudo chmod 644 /etc/systemd/system/xmasshowpi.service
+> 
+> shell# sudo systemctl daemon-reload
+
+#### Test service
+> shell# sudo systemctl start xmasshowpi
+>
+It should be started at this point, check the status and look for the output saying Playing: ...
+> shell# sudo systemctl status xmasshowpi
+> 
+
+#### Enable systemd service at bootup
+If everything started okay, enable it at bootup
+> shell# sudo systemctl enable xmasshowpi
