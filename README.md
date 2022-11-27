@@ -11,6 +11,10 @@ Checkout the Wiki page for hardware and other notes
 
 ## Install Dependencies and Python3 software modules
 Install system dependencies
+> shell# sudo apt update
+> 
+> shell# sudo apt install git
+> 
 > shell# sudo apt install python3-pip
 >
 > shell# sudo apt install libasound2-dev
