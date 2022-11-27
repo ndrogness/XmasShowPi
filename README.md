@@ -8,6 +8,21 @@ and no manual sequencing/timing is required (its all done through a config file)
 
 Checkout the Wiki page for hardware and other notes
 
+
+## Install Dependencies and Python3 software modules
+Install system dependencies
+> shell# sudo apt install python3-pip
+>
+> shell# sudo apt install libasound2-dev
+> 
+Install adafruit_blinka, alsaaudio, numpy
+> shell# pip3 install adafruit-blinka
+>
+> shell# pip3 install pyalsaaudio
+>
+> shell# pip3 install numpy
+
+
 ## Checkout repo
 This is intended to run in /home/pi/XmasShowPi directory
 >shell# cd /home/pi
@@ -16,13 +31,6 @@ This is intended to run in /home/pi/XmasShowPi directory
 > 
 >shell# cd XmasShowPi
 
-## Required Python3 Software modules
-Install adafruit_blinka, alsaaudio, numpy
-> shell# pip3 install adafruit-blinka
->
-> shell# pip3 install pyalsaaudio
->
-> shell# pip3 install numpy
 
 ## Setup Config file
 Copy example config to main config
