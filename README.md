@@ -13,11 +13,7 @@ Checkout the Wiki page for hardware and other notes
 Install system dependencies
 > shell# sudo apt update
 > 
-> shell# sudo apt install git
-> 
-> shell# sudo apt install python3-pip
->
-> shell# sudo apt install libasound2-dev
+> shell# sudo apt install git python3-pip libasound2-dev
 > 
 Install adafruit_blinka, alsaaudio, numpy
 > shell# pip3 install adafruit-blinka
