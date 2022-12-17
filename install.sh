@@ -19,7 +19,7 @@ fi
 EXEC="sudo -u $USER /usr/bin/python3 -u $EXEC_DIR/XmasShowPi.py"
 
 SERVICE_SH="$EXEC_DIR/xmasshowpi_service.sh"
-echo '#!/usr/bin/env bash' >> $SERVICE_SH
+echo '#!/usr/bin/env bash' > $SERVICE_SH
 echo "EXEC_DIR='$EXEC_DIR'" >> $SERVICE_SH
 echo "EXEC='$EXEC'" >> $SERVICE_SH
 echo 'Starting XmasShowPi' >> $SERVICE_SH
